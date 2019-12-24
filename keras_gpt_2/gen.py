@@ -6,7 +6,8 @@ def generate(model,
              texts,
              length=100,
              top_k=1,
-             temperature=1.0):
+             temperature=1.0,
+             fixed_input_shape=False):
     """Generate text after the given contexts.
 
     :param model: The trained model.
@@ -20,7 +21,7 @@ def generate(model,
     batch_size = len(texts)
     encodes = [bpe.encode(text) for text in texts]
     text_lens = [len(encode) for encode in encodes]
-    max_len = max(text_lens)
+    max_len = max(text_lens) if not fixed_input_shape else length
     input_data = [encode + [0] * (max_len - len(encode)) for encode in encodes]
     for shift in range(length):
         output_data = model.predict(np.array(input_data))

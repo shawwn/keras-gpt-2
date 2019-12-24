@@ -1,13 +1,22 @@
 from .backend import keras
+from keras import backend as K
 from keras_embed_sim import EmbeddingRet, EmbeddingSim
 from keras_pos_embd import PositionEmbedding
 from keras_layer_normalization import LayerNormalization
-from keras_transformer import gelu, attention_builder, feed_forward_builder
+from keras_transformer import attention_builder, feed_forward_builder
 from keras_transformer import get_custom_objects as get_transformer_custom_objects
 
+import math
 
-__all__ = ['get_model', 'get_custom_objects']
+__all__ = ['get_model', 'compile_model', 'get_custom_objects']
 
+def gelu(x):
+    """
+    GELU activation, described in paper "Gaussian Error Linear Units (GELUs)"
+    https://arxiv.org/pdf/1606.08415.pdf
+    """
+    c = math.sqrt(2 / math.pi)
+    return 0.5 * x * (1 + K.tanh(c * (x + 0.044715 * K.pow(x, 3))))
 
 def _wrap_layer(name, input_layer, build_func, trainable=True):
     """Wrap layers with normalization and residual.
@@ -71,6 +80,9 @@ def _get_encoder_component(name,
     )
     return feed_forward_layer
 
+def compile_model(model):
+    model.compile(optimizer=keras.optimizers.Adam(), loss=keras.losses.sparse_categorical_crossentropy)
+    return model
 
 def get_model(n_vocab,
               n_ctx=1024,
@@ -78,7 +90,8 @@ def get_model(n_vocab,
               n_head=12,
               n_layer=12,
               batch_size=None,
-              fixed_input_shape=False):
+              fixed_input_shape=False,
+              compile=True):
     """Get basic GPT-2 model.
 
     :param n_vocab: Number of vocabulary tokens.
@@ -133,10 +146,8 @@ def get_model(n_vocab,
     )([norm_layer, embeddings])
 
     model = keras.models.Model(inputs=input_layer, outputs=output_layer)
-    model.compile(
-        optimizer=keras.optimizers.Adam(),
-        loss=keras.losses.sparse_categorical_crossentropy,
-    )
+    if compile:
+        model = compile_model(model)
     return model
 
 
